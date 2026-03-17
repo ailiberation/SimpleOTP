@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+  <title>OTP Pad</title>
+  <script type="importmap">
+  {
+    "imports": {}
+  }
+  </script>
+</head>
+<body>
+  <main id="app">
+    <div class="row top-row">
+      <div class="pad-panel">
+        <div class="panel-header">Pad (5×20)</div>
+        <div id="pad-grid" class="grid" role="grid" aria-label="one time pad grid"></div>
+        <div class="pad-actions">
+          <button id="fill-random" class="btn">Randomize</button>
+          <button id="clear-pad" class="btn">Clear</button>
+          <button id="export-pad" class="btn">Export</button>
+          <button id="import-pad" class="btn">Import</button>
+        </div>
+      </div>
+
+      <div class="ops-panel">
+        <label class="field">
+          <span class="label">Key</span>
+          <input id="key" inputmode="text" placeholder="enter key" />
+        </label>
+
+        <label class="field">
+          <span class="label">Message</span>
+          <textarea id="message" placeholder="Plaintext for encrypt / Ciphertext (base64) for decrypt"></textarea>
+        </label>
+
+        <div class="ops">
+          <button id="encrypt" class="primary">Encrypt</button>
+          <button id="decrypt" class="primary">Decrypt</button>
+        </div>
+
+        <label class="field">
+          <span class="label">Result</span>
+          <textarea id="result" readonly placeholder="Result appears here"></textarea>
+        </label>
+
+        <div class="note">Pad values 0–100. Message limited by pad length (100 bytes).</div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    }
+  </script>
+</body>
+</html>

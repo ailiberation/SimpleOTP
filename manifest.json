@@ -1,0 +1,9 @@
+{
+  "name":"Simple One Time Pad",
+  "short_name":"SimpleOTP",
+  "start_url":".",
+  "display":"standalone",
+  "background_color":"#f6f7f8",
+  "theme_color":"#0b7cff",
+  "icons":[]
+}

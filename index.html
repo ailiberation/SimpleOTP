@@ -16,7 +16,7 @@
   <main id="app">
     <div class="row top-row">
       <div class="pad-panel">
-        <div class="panel-header">Pad (5×20)</div>
+        <div class="panel-header">Pad (8×32)</div>
         <div id="pad-grid" class="grid" role="grid" aria-label="one time pad grid"></div>
         <div class="pad-actions">
           <button id="fill-random" class="btn">Randomize</button>
@@ -47,7 +47,7 @@
           <textarea id="result" readonly placeholder="Result appears here"></textarea>
         </label>
 
-        <div class="note">Pad values 0–100. Message limited by pad length (100 bytes).</div>
+        <div class="note">Pad values 0–255. Message limited by pad length (256 bytes).</div>
       </div>
     </div>
   </main>

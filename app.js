@@ -1,6 +1,6 @@
 /*
 Core app logic:
-- 5 columns × 20 rows pad (100 numbers 0..100)
+- 8 columns × 32 rows pad (256 numbers 0..255)
 - User enters key string -> deterministic starting offset via SHA-256
 - Encrypt: UTF-8 bytes + pad numbers (mod 256) -> base64
 - Decrypt: base64 -> bytes - pad numbers (mod 256) -> UTF-8
@@ -9,7 +9,7 @@ Core app logic:
 
 import { sha256 } from 'https://esm.sh/sha.js@2.4.11' // lightweight sha256 via esm.sh
 
-const COLS = 5, ROWS = 20, LEN = COLS * ROWS;
+const COLS = 8, ROWS = 32, LEN = COLS * ROWS;
 const padGrid = document.getElementById('pad-grid');
 const keyInput = document.getElementById('key');
 const messageEl = document.getElementById('message');
@@ -30,13 +30,13 @@ for (let i = 0; i < LEN; i++) {
   const inp = document.createElement('input');
   inp.type = 'number';
   inp.min = '0';
-  inp.max = '100';
+  inp.max = '255';
   inp.inputMode = 'numeric';
   inp.value = '0';
   inp.addEventListener('input', (e) => {
     let v = parseInt(inp.value || '0', 10);
     if (Number.isNaN(v)) v = 0;
-    v = Math.max(0, Math.min(100, v));
+    v = Math.max(0, Math.min(255, v));
     inp.value = String(v);
     pad[i] = v;
   });
@@ -65,7 +65,7 @@ function transform(inputBytes, key, encrypt=true){
   if (inputBytes.length > LEN) throw new Error('message too long for pad (max ' + LEN + ' bytes)');
   const out = new Uint8Array(inputBytes.length);
   for (let i = 0; i < inputBytes.length; i++){
-    const padVal = pad[(offset + i) % LEN] & 0xff; // 0..100
+    const padVal = pad[(offset + i) % LEN] & 0xff; // 0..255
     if (encrypt) out[i] = (inputBytes[i] + padVal) & 0xff;
     else out[i] = (inputBytes[i] - padVal + 256) & 0xff;
   }
@@ -101,7 +101,7 @@ decryptBtn.addEventListener('click', () => {
 
 fillRandomBtn.addEventListener('click', () => {
   for (let i=0;i<LEN;i++){
-    const v = Math.floor(Math.random()*101);
+    const v = Math.floor(Math.random()*256);
     pad[i]=v;
     padGrid.children[i].firstElementChild.value = String(v);
   }
@@ -141,7 +141,7 @@ importBtn.addEventListener('click', () => {
       for (let i=0;i<LEN;i++){
         let v = parseInt(obj.pad[i]||0,10);
         if (Number.isNaN(v)) v=0;
-        v = Math.max(0,Math.min(100,v));
+        v = Math.max(0,Math.min(255,v));
         pad[i]=v;
         padGrid.children[i].firstElementChild.value = String(v);
       }

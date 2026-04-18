@@ -21,145 +21,111 @@ const importBtn = document.getElementById('import-pad');
 
 let pad = new Array(LEN).fill(0);
 
-// build grid
-for (let i = 0; i < LEN; i++) {
-  const cell = document.createElement('div');
-  cell.className = 'cell';
-  const inp = document.createElement('input');
-  inp.type = 'number';
-  inp.min = '0';
-  inp.max = '255';
-  inp.inputMode = 'numeric';
-  inp.value = '0';
-  inp.addEventListener('input', (e) => {
-    let v = parseInt(inp.value || '0', 10);
-    if (Number.isNaN(v)) v = 0;
-    v = Math.max(0, Math.min(255, v));
-    inp.value = String(v);
-    pad[i] = v;
-  });
-  cell.appendChild(inp);
-  padGrid.appendChild(cell);
+// 1. BUILD GRID (Do this first so the UI always appears)
+function initGrid() {
+  padGrid.innerHTML = ''; // Clear existing
+  for (let i = 0; i < LEN; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.min = '0';
+    inp.max = '255';
+    inp.inputMode = 'numeric';
+    inp.value = '0';
+    inp.addEventListener('input', (e) => {
+      let v = parseInt(inp.value || '0', 10);
+      if (Number.isNaN(v)) v = 0;
+      v = Math.max(0, Math.min(255, v));
+      inp.value = String(v);
+      pad[i] = v;
+    });
+    cell.appendChild(inp);
+    padGrid.appendChild(cell);
+  }
 }
 
-// helpers
+// 2. HELPERS
 function encodeUTF8(s){ return new TextEncoder().encode(s); }
 function decodeUTF8(bytes){ return new TextDecoder().decode(bytes); }
 function toBase64(bytes){ return btoa(String.fromCharCode(...bytes)); }
-function fromBase64(b64){ const s = atob(b64); const arr = new Uint8Array(s.length); for(let i=0;i<s.length;i++) arr[i]=s.charCodeAt(i); return arr; }
+function fromBase64(b64){ 
+  const s = atob(b64); 
+  const arr = new Uint8Array(s.length); 
+  for(let i=0; i<s.length; i++) arr[i]=s.charCodeAt(i); 
+  return arr; 
+}
 
-// derive offset from key: hash -> integer (Built-in Web Crypto)
+// 3. CORE LOGIC (Web Crypto API)
 async function keyOffset(key) {
   const msgBuffer = new TextEncoder().encode(key);
+  // This requires HTTPS to work
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   
-  // take first 8 hex chars -> 32-bit int
   const part = hashHex.slice(0, 8);
   const num = parseInt(part, 16);
   return num % LEN;
 }
 
-// core transform
 async function transform(inputBytes, key, encrypt=true){
   const offset = await keyOffset(key);
-  if (inputBytes.length > LEN) throw new Error('message too long for pad (max ' + LEN + ' bytes)');
+  if (inputBytes.length > LEN) throw new Error('Message too long (max 256 bytes)');
   const out = new Uint8Array(inputBytes.length);
   for (let i = 0; i < inputBytes.length; i++){
-    const padVal = pad[(offset + i) % LEN] & 0xff; // 0..255
+    const padVal = pad[(offset + i) % LEN] & 0xff;
     if (encrypt) out[i] = (inputBytes[i] + padVal) & 0xff;
     else out[i] = (inputBytes[i] - padVal + 256) & 0xff;
   }
   return out;
 }
 
-// UI actions
+// 4. UI ACTIONS
 encryptBtn.addEventListener('click', async () => {
   try {
     const key = keyInput.value || '';
-    if (key.length === 0) { alert('Enter a key'); return; }
+    if (!key) { alert('Enter a key'); return; }
     const inputBytes = encodeUTF8(messageEl.value || '');
     const out = await transform(inputBytes, key, true);
-    resultEl.value = toBase64(out);
-  } catch (err
-    let v = parseInt(inp.value || '0', 10);
-    if (Number.isNaN(v)) v = 0;
-    v = Math.max(0, Math.min(255, v));
-    inp.value = String(v);
-    pad[i] = v;
-  });
-  cell.appendChild(inp);
-  padGrid.appendChild(cell);
-}
-
-// helpers
-function encodeUTF8(s){ return new TextEncoder().encode(s); }
-function decodeUTF8(bytes){ return new TextDecoder().decode(bytes); }
-function toBase64(bytes){ return btoa(String.fromCharCode(...bytes)); }
-function fromBase64(b64){ const s = atob(b64); const arr = new Uint8Array(s.length); for(let i=0;i<s.length;i++) arr[i]=s.charCodeAt(i); return arr; }
-
-// derive offset from key: hash -> integer
-function keyOffset(key){
-  const h = sha256().update(key).digest('hex');
-  // take first 8 hex chars -> 32-bit int
-  const part = h.slice(0,8);
-  const num = parseInt(part,16);
-  return num % LEN;
-}
-
-// core transform
-function transform(inputBytes, key, encrypt=true){
-  const offset = keyOffset(key);
-  if (inputBytes.length > LEN) throw new Error('message too long for pad (max ' + LEN + ' bytes)');
-  const out = new Uint8Array(inputBytes.length);
-  for (let i = 0; i < inputBytes.length; i++){
-    const padVal = pad[(offset + i) % LEN] & 0xff; // 0..255
-    if (encrypt) out[i] = (inputBytes[i] + padVal) & 0xff;
-    else out[i] = (inputBytes[i] - padVal + 256) & 0xff;
-  }
-  return out;
-}
-
-// UI actions
-encryptBtn.addEventListener('click', () => {
-  try {
-    const key = keyInput.value || '';
-    if (key.length === 0) { alert('Enter a key'); return; }
-    const inputBytes = encodeUTF8(messageEl.value || '');
-    const out = transform(inputBytes, key, true);
     resultEl.value = toBase64(out);
   } catch (err) {
     alert('Error: ' + err.message);
   }
 });
 
-decryptBtn.addEventListener('click', () => {
+decryptBtn.addEventListener('click', async () => {
   try {
     const key = keyInput.value || '';
-    if (key.length === 0) { alert('Enter a key'); return; }
+    if (!key) { alert('Enter a key'); return; }
     const b64 = messageEl.value.trim();
     if (!b64) { alert('Enter base64 ciphertext'); return; }
     const bytes = fromBase64(b64);
-    const out = transform(bytes, key, false);
+    const out = await transform(bytes, key, false);
     resultEl.value = decodeUTF8(out);
   } catch (err) {
     alert('Error: ' + err.message);
   }
 });
 
-fillRandomBtn.addEventListener('click', () => {
-  for (let i=0;i<LEN;i++){
-    const v = Math.floor(Math.random()*256);
-    pad[i]=v;
-    padGrid.children[i].firstElementChild.value = String(v);
+function randomizePad() {
+  for (let i = 0; i < LEN; i++) {
+    const v = Math.floor(Math.random() * 256);
+    pad[i] = v;
+    if (padGrid.children[i]) {
+      padGrid.children[i].querySelector('input').value = String(v);
+    }
   }
-});
+}
+
+fillRandomBtn.addEventListener('click', randomizePad);
 
 clearPadBtn.addEventListener('click', () => {
-  for (let i=0;i<LEN;i++){
-    pad[i]=0;
-    padGrid.children[i].firstElementChild.value = '0';
+  for (let i = 0; i < LEN; i++) {
+    pad[i] = 0;
+    if (padGrid.children[i]) {
+      padGrid.children[i].querySelector('input').value = '0';
+    }
   }
 });
 
@@ -187,12 +153,11 @@ importBtn.addEventListener('click', () => {
       const txt = await f.text();
       const obj = JSON.parse(txt);
       if (!Array.isArray(obj.pad) || obj.pad.length !== LEN) throw new Error('Invalid pad file');
-      for (let i=0;i<LEN;i++){
-        let v = parseInt(obj.pad[i]||0,10);
-        if (Number.isNaN(v)) v=0;
-        v = Math.max(0,Math.min(255,v));
-        pad[i]=v;
-        padGrid.children[i].firstElementChild.value = String(v);
+      for (let i=0; i<LEN; i++){
+        let v = parseInt(obj.pad[i]||0, 10);
+        v = Math.max(0, Math.min(255, v));
+        pad[i] = v;
+        padGrid.children[i].querySelector('input').value = String(v);
       }
     } catch (e){
       alert('Import failed: ' + e.message);
@@ -201,5 +166,6 @@ importBtn.addEventListener('click', () => {
   inp.click();
 });
 
-// initialize with random pad for convenience
-fillRandomBtn.click();
+// 5. INITIALIZE
+initGrid();
+randomizePad();
